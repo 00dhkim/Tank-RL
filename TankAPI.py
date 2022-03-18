@@ -4,11 +4,13 @@ import json
 # 서버와 통신하는 클래스
 class TankAPI():
     
-    def __init__(self, ip, playername):
-        self.ip = ip
-        self.game_map = GameMap()
+    def __init__(self):
+        self.gameMap = GameMap()
         self.key = None
-        self.playername = playername
+        self.ip = None
+        self.playername = None
+        self.turn = None
+        self.dilation = None
     
     def session_resource(self):
         resource = requests.get("http://20.196.214.79:5050/session/resource", params={"ip": self.ip})
@@ -23,40 +25,46 @@ class TankAPI():
             'Res_X': res_x,
             'Res_Y': res_y
         }
+        print('session create..', end='', flush=True)
         while True:
             try:
                 create = requests.post("http://20.196.214.79:5050/session/create", params)
             except ConnectionRefusedError or ConnectionResetError:
+                print('..', end='', flush=True)
                 continue
             if create.status_code == 200:
                 break
-        print('session created')
+        print('done!')
         self.key = json.loads(create.content)['key']
     
     def session_join(self):
         params = {"key": self.key, "playername": self.playername}
         join = requests.post("http://20.196.214.79:5050/session/join", data=params)
+        print('join..', end='', flush=True)
         while True:
             if join.status_code == 200:
-                print('join success')
+                print('done!')
                 self._game_start()
+                break
             else:
-                print('session join fail, retry')
+                print('..', end='', flush=True)
                 join = requests.post("http://20.196.214.79:5050/session/join", data=params)
     
-    def _game_start(self, turn, dilation):
+    def _game_start(self):
         startParams = {
             'key': self.key,
             'playername': self.playername,
-            'turn': turn,
-            'dilation': dilation
+            'turn': self.turn,
+            'dilation': self.dilation
         }
+        print('game start..', end='', flush=True)
         join = requests.post("http://20.196.214.79:5050/game/start", data=startParams)
         while True:
             if join.status_code == 200:
-                print('game start')
+                print('done!')
+                break
             else:
-                print('game start fail, retry')
+                print('..', end='', flush=True)
                 join = requests.post("http://20.196.214.79:5050/game/start", data=startParams)
     
     def game_status(self):
@@ -104,6 +112,7 @@ class TankAPI():
     def agent_rotate(self, uid, angle):
         '''
         angle: 45 or -45
+        45로 주면 오른쪽으로 돌림
         '''
         rotateParam = {'key': self.key, 'uid': uid, 'angle': angle}
         while True:
@@ -132,12 +141,12 @@ class TankAPI():
             info = json.loads(view.content)["responses"]["data"]["message"]["info"]
             for object in info:
                 if object not in objects and object["IsExistObject"] == True:
-                    self.game_map.set_map(object['location'][0], object['location'][1], object['ObjectType'])
+                    self.gameMap.set_map(object['location'][0], object['location'][1], object['ObjectType'])
                     objects.append(object)
         
         for agent in agents:
-            self.game_map.set_map(agent['location'][0], agent['location'][1], 9)
-        return objects, self.game_map
+            self.gameMap.set_map(agent['location'][0], agent['location'][1], 9)
+        return objects, self.gameMap
 
 
 # 좌표를 칸으로 바꿔서 출력해주기 위한 클래스
@@ -172,4 +181,4 @@ class GameMap:
             assert 0 <= x <= 31 and 0 <= y <= 31
             self.game_map[y][x] = objectType
         except:
-            print('exepted', x, y)
+            print('location excepted', x, y)

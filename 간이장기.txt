@@ -1,0 +1,27 @@
+목적
+1. state를 어떻게 정의할것인가.
+2. action set을 어떻게 처리할 것인가.
+
+https://github.com/Jpub/AlphaZero/tree/master/8_game/8_3_simple_shogi
+
+1. game.py(게임 환경)
+
+2. train_cycle.py(self play로 학습 데이터 만들고, 이 데이터로 학습하는 과정)
+
+2-1) dual_network.py
+
+2-2) self_play.py 
+
+2-3) train_network.py 
+
+2-4) evaluate_network.py(pv_mcts.py는 여기서 사용)
+
+3. human_play.py
+
+---
+
+메모
+
+Q. dqn 했을때 코드들은 get_action해서 액션셋 얻고, env.step 해서 next_state와 reward를 얻었다. game.py의 State는 조금 다른거같은데? 지금 보이기로는 State의 legal_actions 함수를 통해 액션셋 얻고있네. 그리고 self_play.py 58번 라인보면 action과 policy를 같이 얻고 있는데 이건 dqn때의 환경과 다른건가?
+dqn에서는 state를 토대로 action을 선택했음. 여기서는 볼츠만 분포? 이런게 있길래 혹시 정책(확률값)을 기반으로 확률적으로 선택되는건가..?
+
