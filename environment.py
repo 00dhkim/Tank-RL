@@ -18,6 +18,7 @@ class Environment():
     2) 2번 전차 정보, [HP, AP, angle]
     3) 3번 전차 정보, [HP, AP, angle]
     4) 4번 전차 정보, [HP, AP, angle]
+    정보에서 각도는 45의 배수이면서 [0, 360) 사이의 값이어야 함
     
     # memo: 필요 시 아군탱크, 적탱크, 장애물 리스트를 각각 지정할 수도.
     
@@ -140,14 +141,25 @@ class Environment():
     
     # 현재 조종할 탱크를 기준으로 수행할 수 있는 액션만 반환
     def legal_actions(self):
+        # memo: 가고싶은 곳에 장애물 있어도 갈 수 있는 경우 있어서, 장애물이 갈 길을 막고있는 상황은 고려하지 않았음
         actions = []
+        hp, ap, angle = self.tank_info[self.turn_tank-1]
         
-        status = self.tankAPI.game_status()
-        agents = status['responses']['data']['message']['agent_info']['agent']
-        agent = agents[self.turn_tank-1]
-        
-        
-        pass
+        if hp <= 0:
+            actions = [7]
+            return actions
+        if ap >= 4:
+            actions = [0, 1, 2, 3, 4, 5, 6, 7]
+            return actions
+        if ap >= 2:
+            actions = [1, 2, 3, 4, 5, 6, 7]
+            return actions
+        if ap >= 1:
+            actions = [1, 2, 7]
+            return actions
+        if ap == 0:
+            actions = [7]
+            return actions
     
     # 액션을 받아 한 단계 실행하는 함수
     def step(self, action):
