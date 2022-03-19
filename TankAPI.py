@@ -1,4 +1,5 @@
 import requests
+from requests.exceptions import ChunkedEncodingError
 import json
 
 # 서버와 통신하는 클래스
@@ -25,12 +26,12 @@ class TankAPI():
             'Res_X': res_x,
             'Res_Y': res_y
         }
-        print('session create..', end='', flush=True)
+        print('session create', end='', flush=True)
         while True:
             try:
-                create = requests.post("http://20.196.214.79:5050/session/create", params)
-            except ConnectionRefusedError or ConnectionResetError:
                 print('..', end='', flush=True)
+                create = requests.post("http://20.196.214.79:5050/session/create", params)
+            except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
                 continue
             if create.status_code == 200:
                 break
@@ -69,13 +70,14 @@ class TankAPI():
     
     def game_status(self):
         statusParam = {"key": self.key, "playername": self.playername}
-        statusResponse = requests.get("http://20.196.214.79:5050/game/status", statusParam)
         while True:
+            try:
+                statusResponse = requests.get("http://20.196.214.79:5050/game/status", statusParam)
+            except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
+                continue
             if statusResponse.status_code == 200:
                 status = json.loads(statusResponse.content)
                 return status
-            else:
-                statusResponse = requests.get("http://20.196.214.79:5050/game/status", statusParam)
     
     def _dirTxt(self, dirInt):
         if dirInt == 0:
@@ -92,22 +94,20 @@ class TankAPI():
         while True:
             try:
                 move = requests.post("http://20.196.214.79:5050/agent/move", data=moveParam)
-            except ConnectionRefusedError or ConnectionResetError:
+            except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
                 continue
             if move.status_code == 200:
                 break
-        print(uid, '->', self._dirTxt(direction))
     
     def agent_attack(self, uid):
         attackParam = {'key':self.key, 'uid': uid}
         while True:
             try:
                 attack = requests.post("http://20.196.214.79:5050/agent/attack", data=attackParam)
-            except ConnectionRefusedError or ConnectionResetError:
+            except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
                 continue
             if attack.status_code == 200:
                 break
-        print(uid, '-> Attack')
     
     def agent_rotate(self, uid, angle):
         '''
@@ -118,11 +118,10 @@ class TankAPI():
         while True:
             try:
                 rotate = requests.post("http://20.196.214.79:5050/agent/rotate", data=rotateParam)
-            except ConnectionRefusedError or ConnectionResetError:
+            except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
                 continue
             if rotate.status_code == 200:
                 break
-        print(uid, '-> Rotate', angle)
     
     def game_view(self):
         status = self.game_status()
@@ -133,17 +132,19 @@ class TankAPI():
             while True:
                 try:
                     view = requests.get(f"http://20.196.214.79:5050/game/view", params={"key": self.key, "uid": uid})
-                except ConnectionRefusedError or ConnectionResetError:
+                except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
                     continue
                 if view.status_code == 200:
                     break
         
+            # 상대 탱크와 장애물 표시
             info = json.loads(view.content)["responses"]["data"]["message"]["info"]
             for object in info:
                 if object not in objects and object["IsExistObject"] == True:
                     self.gameMap.set_map(object['location'][0], object['location'][1], object['ObjectType'])
                     objects.append(object)
         
+        # 아군 탱크 표시
         for agent in agents:
             self.gameMap.set_map(agent['location'][0], agent['location'][1], 9)
         return objects, self.gameMap
