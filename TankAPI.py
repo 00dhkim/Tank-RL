@@ -1,3 +1,4 @@
+import time
 import requests
 from requests.exceptions import ChunkedEncodingError
 import json
@@ -32,6 +33,7 @@ class TankAPI():
                 print('..', end='', flush=True)
                 create = requests.post("http://20.196.214.79:5050/session/create", params)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
+                time.sleep(10)
                 continue
             if create.status_code == 200:
                 break
@@ -74,6 +76,7 @@ class TankAPI():
             try:
                 statusResponse = requests.get("http://20.196.214.79:5050/game/status", statusParam)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
+                time.sleep(10)
                 continue
             if statusResponse.status_code == 200:
                 status = json.loads(statusResponse.content)
@@ -95,6 +98,7 @@ class TankAPI():
             try:
                 move = requests.post("http://20.196.214.79:5050/agent/move", data=moveParam)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
+                time.sleep(10)
                 continue
             if move.status_code == 200:
                 break
@@ -105,6 +109,7 @@ class TankAPI():
             try:
                 attack = requests.post("http://20.196.214.79:5050/agent/attack", data=attackParam)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
+                time.sleep(10)
                 continue
             if attack.status_code == 200:
                 break
@@ -119,6 +124,7 @@ class TankAPI():
             try:
                 rotate = requests.post("http://20.196.214.79:5050/agent/rotate", data=rotateParam)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
+                time.sleep(10)
                 continue
             if rotate.status_code == 200:
                 break
@@ -133,6 +139,7 @@ class TankAPI():
                 try:
                     view = requests.get(f"http://20.196.214.79:5050/game/view", params={"key": self.key, "uid": uid})
                 except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
+                    time.sleep(10)
                     continue
                 if view.status_code == 200:
                     break

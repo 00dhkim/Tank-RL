@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import sys
+import time
 
 import TankAPI
 
@@ -73,15 +74,7 @@ class Environment():
         
         self._set_map()
     
-    # TODO:
-    '''
-    # TODO: 해결완료 (주포방향 보임)
-    enemy_tank_update와 관련하여...
-    적 위치 확인하고 - 멀리 움직이고 - 쏜다
-    이 경우에는 적이 죽었는지 살았는지 판별 불가능
-    이럴 때에는 어떻게 해야 할까?
-    일단 지금 구현된거는 5칸 범위 이내의 적에게만 쐈다는 가정 하에 구현되어있음.
-    '''
+    
     def _set_map(self, enemy_tank_update = False):
         # 내 턴에서 이동할 때에는 상대 탱크 업데이트 하지 않음
         # 내 턴에서 공격할 때에는 상대 탱크 업데이트 수행함
@@ -179,6 +172,7 @@ class Environment():
         assert action in self.legal_actions()
         reward = 0
         hit = False
+        enemy_tank_update = False
         
         status = self.tankAPI.game_status()
         agents = status['responses']['data']['message']['agent_info']['agent']
@@ -201,6 +195,7 @@ class Environment():
                 elif self.map[ii][jj] == 5: # 적이면 타격성공
                     reward += 50
                     hit = True
+                    enemy_tank_update = True
                     print('hit!')
                 else: # TODO: 아군에게 쏜다면??????????????
                     break
@@ -236,8 +231,9 @@ class Environment():
         elif action == 7: # FIXME: turn end
             print(uid, '-> turn end')
             if self.turn_tank == 4:
-                sys.exit()
                 self.turn_tank = 1
+                enemy_tank_update = True
+                self._wait_enemy()
             else:
                 self.turn_tank += 1
         
@@ -249,9 +245,12 @@ class Environment():
         
         for agentIdx in range(len(agents)):
             agent = agents[agentIdx]
+            if self.tank_info[agentIdx][0] != agent['hp']: # 피격당했다면
+                reward -= self.tank_info[agentIdx][0] - agent['hp']
             self.tank_info[agentIdx] = [agent['hp'], agent['ap'], self.tank_info[agentIdx][2]]
         
-        self._set_map()
+        # 적을 타격했거나 내 턴이 완전히 끝난 경우는 업데이트
+        self._set_map(enemy_tank_update=enemy_tank_update)
         
         
         ## reward 판단하기
@@ -281,10 +280,13 @@ class Environment():
     
     # 내 턴이 끝나고 상대 턴을 기다리는 함수
     def _wait_enemy(self):
-        # TODO: 상대의 움직임 파악하기, 아군이 맞았는지 판단하기 (맞았으면 음의 리워드)
-        # TODO: 언제 이 함수를 호출할 것인지 고민하기
-        # TODO: 적 턴이 끝나고 나면 적 위치를 self.map에서 빈공간으로 만든다
-        pass
+        while True:
+            isTurnOwner = self.tankAPI.game_status()['responses']['data']['message']['game_info']['IsTurnOwner']
+            if not isTurnOwner:
+                time.sleep(5)
+            else:
+                break
+    
     
     # 지금까지 진행된 상황 뿌려주기
     def render(self):
@@ -314,8 +316,12 @@ if __name__ == '__main__':
     while True:
         actions = env.legal_actions()
         state, reward, done, info = env.step(random.choice(actions))
-        print('reward:', reward)
+        if reward != 0:
+            print('reward:', reward)
         env.render()
+        if done:
+            print('*'*30,'\n\ndone!', info)
+            break
 
 
 
@@ -335,5 +341,10 @@ y원래 = 166450
 
 east와 west 반대로 된 듯
 move 명령 내렸는데 위치가 이전과 동일하다? 음의 reward
+
+---
+
+('Connection aborted.', ConnectionResetError(10054, '', None, 10054, None))
+(Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001B2617407F0>: Failed to establish a new connection: [WinError 10061] 대상 컴퓨터에서 연결을 거부했으므로 연결하지 못했습니다'))
 
 '''
