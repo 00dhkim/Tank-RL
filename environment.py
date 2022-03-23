@@ -2,6 +2,7 @@ import numpy as np
 import random
 import sys
 import time
+from requests import get
 
 import TankAPI
 
@@ -58,21 +59,31 @@ class Environment():
         
         self.tankAPI = TankAPI.TankAPI()
     
-    # 처음에 해주는 초기화
-    def reset(self, ip=IP, playername=PLAYERNAME, turn=TURN, dilation=DILATION):
+    # 세션 맨 처음에 생성
+    def start(self, ip=IP, playername=PLAYERNAME, turn=TURN, dilation=DILATION):
         self.tankAPI.ip, self.tankAPI.playername, self.tankAPI.turn, self.tankAPI.dilation = ip, playername, turn, dilation
         
+        print('ip:',ip)
         self.tankAPI.session_resource()
         self.tankAPI.session_create()
+    
+    # 세션 초기화 및 정보 가져오기
+    def reset(self):
+        
+        self.tankAPI.session_reset()
         self.tankAPI.session_join()
+        
         status = self.tankAPI.game_status()
         agents = status['responses']['data']['message']['agent_info']['agent']
-                
+        
         for agentIdx in range(len(agents)):
             agent = agents[agentIdx]
             self.tank_info[agentIdx] = [agent['hp'], agent['ap'], 0]
         
         self._set_map()
+        state = self._get_state()
+        
+        return state
     
     
     def _set_map(self, enemy_tank_update = False):
@@ -169,6 +180,7 @@ class Environment():
     
     # 액션을 받아 한 단계 실행하는 함수
     def step(self, action):
+        action = action[0][0]
         assert action in self.legal_actions()
         reward = 0
         hit = False
@@ -219,16 +231,16 @@ class Environment():
         elif action == 4: # move north ↑
             print(uid, '-> move north')
             self.tankAPI.agent_move(uid, 2) # TODO: move 4개의 코드 맞는지 테스트
-            
+        
         elif action == 5: # move east →
             print(uid, '-> move east')
             self.tankAPI.agent_move(uid, 1)
-            
+        
         elif action == 6: # move west ←
             print(uid, '-> move west')
             self.tankAPI.agent_move(uid, 3)
-            
-        elif action == 7: # FIXME: turn end
+        
+        elif action == 7: # turn end
             print(uid, '-> turn end')
             if self.turn_tank == 4:
                 self.turn_tank = 1
@@ -274,12 +286,29 @@ class Environment():
             done = True
             info = 'lose'
         
-        state = {'map': self.map, 'tank_info': self.tank_info, 'turn_tank': self.turn_tank, 'enemy_num': self.enemy_num}
+        state = self._get_state()
+        
         return state, reward, done, info
     
+    # 1041개 짜리 1차원 리스트로 리턴
+    def _get_state(self):
+        # return {'map': self.map, 'tank_info': self.tank_info, 'turn_tank': self.turn_tank, 'enemy_num': self.enemy_num}
+        # return self.map, self.tank_info, self.turn_tank, self.enemy_num
+        ret = []
+        for x in self.map:
+            for y in x:
+                ret.append(y)
+        for x in self.tank_info:
+            for y in x:
+                ret.append(y)
+        ret.append(self.turn_tank)
+        ret.append(self.enemy_num)
+        return ret
+        
     
     # 내 턴이 끝나고 상대 턴을 기다리는 함수
     def _wait_enemy(self):
+        self.tankAPI.game_endturn()
         while True:
             isTurnOwner = self.tankAPI.game_status()['responses']['data']['message']['game_info']['IsTurnOwner']
             if not isTurnOwner:
@@ -309,8 +338,10 @@ class Environment():
     
 
 if __name__ == '__main__':
+    ip = get('https://api.ipify.org').text
+    print('ip:', ip)
     env = Environment()
-    env.reset()
+    env.reset(ip=ip)
     env.render()
     
     while True:

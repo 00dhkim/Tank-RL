@@ -145,7 +145,11 @@ class TankAPI():
                     break
         
             # 상대 탱크와 장애물 표시
-            info = json.loads(view.content)["responses"]["data"]["message"]["info"]
+            try:
+                info = json.loads(view.content)["responses"]["data"]["message"]["info"]
+            except KeyError:
+                if json.loads(view.content)['responses']['error']['message']['reason'] == 'This Agent is not avalilable':
+                    continue
             for object in info:
                 if object not in objects and object["IsExistObject"] == True:
                     self.gameMap.set_map(object['location'][0], object['location'][1], object['ObjectType'])
@@ -155,6 +159,39 @@ class TankAPI():
         for agent in agents:
             self.gameMap.set_map(agent['location'][0], agent['location'][1], 9)
         return objects, self.gameMap
+    
+    def game_endturn(self):
+        endturnParam = {'key': self.key, 'playername': self.playername}
+        while True:
+            try:
+                endturn = requests.post("http://20.196.214.79:5050/game/endturn", data=endturnParam)
+            except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
+                time.sleep(10)
+                continue
+            if endturn.status_code == 200:
+                break
+    
+    def session_reset(self):
+        resetParam = {'key':self.key}
+        while True:
+            try:
+                reset = requests.post("http://20.196.214.79:5050/session/reset", data=resetParam)
+            except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
+                time.sleep(10)
+                continue
+            if reset.status_code == 200:
+                break
+    
+    def session_end(self):
+        sessionEndParam = {'key': self.key, 'ip': self.ip}
+        while True:
+            try:
+                sessionEnd = requests.post("http://20.196.214.79:5050/session/end", data=sessionEndParam)
+            except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
+                time.sleep(10)
+                continue
+            if sessionEnd.status_code == 200:
+                break
 
 
 # 좌표를 칸으로 바꿔서 출력해주기 위한 클래스
@@ -189,4 +226,5 @@ class GameMap:
             assert 0 <= x <= 31 and 0 <= y <= 31
             self.game_map[y][x] = objectType
         except:
-            print('location excepted', x, y)
+            # print('location excepted', x, y)
+            pass
