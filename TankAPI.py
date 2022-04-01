@@ -15,7 +15,7 @@ class TankAPI():
         self.dilation = None
     
     def session_resource(self):
-        resource = requests.get("http://20.196.214.79:5050/session/resource", params={"ip": self.ip})
+        resource = requests.get("http://20.196.214.79:5050/session/resource", params={"ip": self.ip}, timeout=60)
         # print('resource: ', resource.status_code, resource.json()["message"])
         if resource.json()['message'] != 'Opened':
             raise Exception('receiver is closed')
@@ -31,9 +31,9 @@ class TankAPI():
         while True:
             try:
                 print('..', end='', flush=True)
-                create = requests.post("http://20.196.214.79:5050/session/create", params)
+                create = requests.post("http://20.196.214.79:5050/session/create", params, timeout=60)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
-                time.sleep(10)
+                time.sleep(1)
                 continue
             if create.status_code == 200:
                 break
@@ -42,7 +42,7 @@ class TankAPI():
     
     def session_join(self):
         params = {"key": self.key, "playername": self.playername}
-        join = requests.post("http://20.196.214.79:5050/session/join", data=params)
+        join = requests.post("http://20.196.214.79:5050/session/join", data=params, timeout=60)
         print('join..', end='', flush=True)
         while True:
             if join.status_code == 200:
@@ -51,7 +51,7 @@ class TankAPI():
                 break
             else:
                 print('..', end='', flush=True)
-                join = requests.post("http://20.196.214.79:5050/session/join", data=params)
+                join = requests.post("http://20.196.214.79:5050/session/join", data=params, timeout=60)
     
     def _game_start(self):
         startParams = {
@@ -61,22 +61,22 @@ class TankAPI():
             'dilation': self.dilation
         }
         print('game start..', end='', flush=True)
-        join = requests.post("http://20.196.214.79:5050/game/start", data=startParams)
+        join = requests.post("http://20.196.214.79:5050/game/start", data=startParams, timeout=60)
         while True:
             if join.status_code == 200:
                 print('done!')
                 break
             else:
                 print('..', end='', flush=True)
-                join = requests.post("http://20.196.214.79:5050/game/start", data=startParams)
+                join = requests.post("http://20.196.214.79:5050/game/start", data=startParams, timeout=60)
     
     def game_status(self):
         statusParam = {"key": self.key, "playername": self.playername}
         while True:
             try:
-                statusResponse = requests.get("http://20.196.214.79:5050/game/status", statusParam)
+                statusResponse = requests.get("http://20.196.214.79:5050/game/status", statusParam, timeout=60)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
-                time.sleep(10)
+                time.sleep(1)
                 continue
             if statusResponse.status_code == 200:
                 status = json.loads(statusResponse.content)
@@ -96,9 +96,9 @@ class TankAPI():
         moveParam = {'key': self.key, 'uid': uid, 'direction': direction}
         while True:
             try:
-                move = requests.post("http://20.196.214.79:5050/agent/move", data=moveParam)
+                move = requests.post("http://20.196.214.79:5050/agent/move", data=moveParam, timeout=60)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
-                time.sleep(10)
+                time.sleep(1)
                 continue
             if move.status_code == 200:
                 break
@@ -107,9 +107,9 @@ class TankAPI():
         attackParam = {'key':self.key, 'uid': uid}
         while True:
             try:
-                attack = requests.post("http://20.196.214.79:5050/agent/attack", data=attackParam)
+                attack = requests.post("http://20.196.214.79:5050/agent/attack", data=attackParam, timeout=60)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
-                time.sleep(10)
+                time.sleep(1)
                 continue
             if attack.status_code == 200:
                 break
@@ -122,9 +122,9 @@ class TankAPI():
         rotateParam = {'key': self.key, 'uid': uid, 'angle': angle}
         while True:
             try:
-                rotate = requests.post("http://20.196.214.79:5050/agent/rotate", data=rotateParam)
+                rotate = requests.post("http://20.196.214.79:5050/agent/rotate", data=rotateParam, timeout=60)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
-                time.sleep(10)
+                time.sleep(1)
                 continue
             if rotate.status_code == 200:
                 break
@@ -137,9 +137,9 @@ class TankAPI():
             uid = agent['uid']
             while True:
                 try:
-                    view = requests.get(f"http://20.196.214.79:5050/game/view", params={"key": self.key, "uid": uid})
+                    view = requests.get(f"http://20.196.214.79:5050/game/view", params={"key": self.key, "uid": uid}, timeout=60)
                 except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
-                    time.sleep(10)
+                    time.sleep(1)
                     continue
                 if view.status_code == 200:
                     break
@@ -164,9 +164,9 @@ class TankAPI():
         endturnParam = {'key': self.key, 'playername': self.playername}
         while True:
             try:
-                endturn = requests.post("http://20.196.214.79:5050/game/endturn", data=endturnParam)
+                endturn = requests.post("http://20.196.214.79:5050/game/endturn", data=endturnParam, timeout=60)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
-                time.sleep(10)
+                time.sleep(1)
                 continue
             if endturn.status_code == 200:
                 break
@@ -175,9 +175,9 @@ class TankAPI():
         resetParam = {'key':self.key}
         while True:
             try:
-                reset = requests.post("http://20.196.214.79:5050/session/reset", data=resetParam)
+                reset = requests.post("http://20.196.214.79:5050/session/reset", data=resetParam, timeout=60)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
-                time.sleep(10)
+                time.sleep(1)
                 continue
             if reset.status_code == 200:
                 break
@@ -186,9 +186,9 @@ class TankAPI():
         sessionEndParam = {'key': self.key, 'ip': self.ip}
         while True:
             try:
-                sessionEnd = requests.post("http://20.196.214.79:5050/session/end", data=sessionEndParam)
+                sessionEnd = requests.post("http://20.196.214.79:5050/session/end", data=sessionEndParam, timeout=60)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
-                time.sleep(10)
+                time.sleep(1)
                 continue
             if sessionEnd.status_code == 200:
                 break

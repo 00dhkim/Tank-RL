@@ -156,6 +156,18 @@ class Environment():
         return angle_directions[angleIdx]
         
     
+    def _get_our_tank_num(self):
+        num = 0
+        if self.tank_info[0][0] != 0:
+            num += 1
+        if self.tank_info[1][0] != 0:
+            num += 1
+        if self.tank_info[2][0] != 0:
+            num += 1
+        if self.tank_info[3][0] != 0:
+            num += 1
+        return num
+    
     # 현재 조종할 탱크를 기준으로 수행할 수 있는 액션만 반환
     def legal_actions(self):
         # memo: 가고싶은 곳에 장애물 있어도 갈 수 있는 경우 있어서, 장애물이 갈 길을 막고있는 상황은 고려하지 않았음
@@ -241,10 +253,11 @@ class Environment():
             self.tankAPI.agent_move(uid, 3)
         
         elif action == 7: # turn end
-            print(uid, '-> turn end')
+            print(uid, '-> turn end\n')
             if self.turn_tank == 4:
                 self.turn_tank = 1
                 enemy_tank_update = True
+                print('wait enemy')
                 self._wait_enemy()
             else:
                 self.turn_tank += 1
@@ -272,6 +285,10 @@ class Environment():
             if self.map[ii][jj] == 7:
                 reward += 100
         
+        # 적 턴 종료 한 후
+        if action == 7 and self.turn_tank == 1:
+            print(f'our: {self._get_our_tank_num()}, enemy:{self.enemy_num}')
+            print('turn', status['responses']['data']['message']['game_info']['Turncount'], '\n')
         
         ## 종료 여부 판단하기
         info = None
