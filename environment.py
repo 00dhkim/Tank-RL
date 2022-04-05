@@ -36,8 +36,8 @@ class Environment():
     2: rotate -45
     3: move south ↓
     4: move north ↑
-    5: move east →
-    6: move west ←
+    5: move west ←
+    6: move east →
     7: turn end
     
     
@@ -142,8 +142,8 @@ class Environment():
     
     def _location2idx(self, location):
         x, y = location[0], location[1]
-        j = (x-25200)//1000
-        i = (y-147450)//1000
+        j = (x-24200)//1000 + 1
+        i = (y-147450)//1000 + 1 # +1은 그냥 만약을 위함, 차피 어레이도 넉넉히 잡았음
         
         assert 0 <= j <= 31 and 0 <= i <= 31
         return i, j # usage: map[i][j]
@@ -152,6 +152,7 @@ class Environment():
     def _angle2direction(self, angle):
         assert angle%45 == 0
         angle_directions = [(1,0), (1,-1), (0,-1), (-1,-1), (-1,0), (-1,1), (0,1), (1,1)]
+        angle = angle % 360
         angleIdx = angle // 45
         return angle_directions[angleIdx]
         
@@ -170,7 +171,7 @@ class Environment():
     
     # 현재 조종할 탱크를 기준으로 수행할 수 있는 액션만 반환
     def legal_actions(self):
-        # memo: 가고싶은 곳에 장애물 있어도 갈 수 있는 경우 있어서, 장애물이 갈 길을 막고있는 상황은 고려하지 않았음
+        # memo: 가고싶은 곳에 장애물 있어도 갈 수 있는 경우 있어서, 장애물이 갈 길을 막고있는 상황은 고려하지 않았음 -> 고려해야됨, 맵 밖으로도 나가지 않도록.
         actions = []
         hp, ap, angle = self.tank_info[self.turn_tank-1]
         
@@ -206,7 +207,7 @@ class Environment():
             print(uid, '-> attack')
             # 포신 방향에서 가장 첫번째에 적이 있었으면 (==포탄이 장애물에 막히지 않으면)
             dir = self._angle2direction(self.tank_info[self.turn_tank-1][2])
-            ii, jj = agent['location'][0], agent['location'][1]
+            ii, jj = self._location2idx(agent['location'][0]), self._location2idx(agent['location'][1])
             while True:
                 ii += dir[0]
                 jj += dir[1]
@@ -221,7 +222,7 @@ class Environment():
                     hit = True
                     enemy_tank_update = True
                     print('hit!')
-                else: # TODO: 아군에게 쏜다면??????????????
+                else:
                     break
                 
                 self.tankAPI.agent_attack(uid)
@@ -242,16 +243,16 @@ class Environment():
             
         elif action == 4: # move north ↑
             print(uid, '-> move north')
-            self.tankAPI.agent_move(uid, 2) # TODO: move 4개의 코드 맞는지 테스트
+            self.tankAPI.agent_move(uid, 2)
         
-        elif action == 5: # move east →
-            print(uid, '-> move east')
-            self.tankAPI.agent_move(uid, 1)
-        
-        elif action == 6: # move west ←
+        elif action == 5: # move west ←
             print(uid, '-> move west')
             self.tankAPI.agent_move(uid, 3)
         
+        elif action == 6: # move east →
+            print(uid, '-> move east')
+            self.tankAPI.agent_move(uid, 1)
+
         elif action == 7: # turn end
             print(uid, '-> turn end\n')
             if self.turn_tank == 4:
@@ -353,6 +354,104 @@ class Environment():
         print('-'*62)
         print()
     
+    
+    # 시야의 적을 잡을 수 있으면, 잡아라
+    def try_to_kill(self):
+        # 이 함수 실행할 때에는 항상 AP==10
+        
+        status = self.tankAPI.game_status()
+        agents = status['responses']['data']['message']['agent_info']['agent']
+        agent = agents[self.turn_tank-1]
+        i, j = self._location2idx(agent['location'][0]), self._location2idx(agent['location'][1])
+        dir = self._angle2direction(self.tank_info[self.turn_tank-1][2])
+
+        # case 1. attack-attack
+        print('case1')
+        ii, jj = i, j
+        while True:
+            ii += dir[0]
+            jj += dir[1]
+            if ii < 0 or ii > 31 or jj < 0 or jj > 31: # map 밖으로 나가면
+                break # case 1 중단 (case 1에 해당하지 않음)
+            elif self.map[ii][jj] == 6: # 장애물이면
+                break # case 1 중단 (case 1에 해당하지 않음)
+            elif self.map[ii][jj] == 5: # 바라보는 방향에 적이 있으면
+                self.step([[0]]) # attack
+                self.step([[0]]) # attack
+                return
+        
+        # case 2. rotate-attack-attack
+        print('case2-')
+        ii, jj = i, j
+        dir = self._angle2direction(self.tank_info[self.turn_tank-1][2] + 45)
+        while True:
+            ii += dir[0]
+            jj += dir[1]
+            if ii < 0 or ii > 31 or jj < 0 or jj > 31: # map 밖으로 나가면
+                break # case 2 중단 (case 2에 해당하지 않음)
+            elif self.map[ii][jj] == 6: # 장애물이면
+                break # case 2 중단 (case 2에 해당하지 않음)
+            elif self.map[ii][jj] == 5: # 바라보는 방향에 적이 있으면
+                self.step([[1]]) # rotate
+                self.step([[0]]) # attack
+                self.step([[0]]) # attack
+                return
+        
+        print('case2+')
+        ii, jj = i, j
+        dir = self._angle2direction(self.tank_info[self.turn_tank-1][2] - 45)
+        while True:
+            ii += dir[0]
+            jj += dir[1]
+            if ii < 0 or ii > 31 or jj < 0 or jj > 31: # map 밖으로 나가면
+                break # case 2 중단 (case 2에 해당하지 않음)
+            elif self.map[ii][jj] == 6: # 장애물이면
+                break # case 2 중단 (case 2에 해당하지 않음)
+            elif self.map[ii][jj] == 5: # 바라보는 방향에 적이 있으면
+                self.step([[2]]) # rotate
+                self.step([[0]]) # attack
+                self.step([[0]]) # attack
+                return
+        
+        # case 3. move-attack-attack
+        # TODO: 구현하기
+        print('case3')
+        
+        pass
+    
+    
+    # 뒤로가라
+    def go_back(self):
+        isdone = [None, False, False, False, False]
+        while True:
+            # 전부 다 되면 return
+            if isdone[1] and isdone[2] and isdone[3] and isdone[4]:
+                return True
+            
+            if isdone[self.turn_tank]:
+                self.step([[7]]) # turn end
+                # 나중에는 턴종료 하지말고 정찰->발사 로직 추가
+            
+            # AP 가능한지
+            if self.tank_info[self.turn_tank - 1][1] < 2:
+                self.step([[7]]) # turn end
+                continue
+            isbreak = False
+            for i in range(32):
+                if isbreak:
+                    break
+                for j in range(32):
+                    if isbreak:
+                        break
+                    if self.map[i][j] == self.turn_tank:
+                        if self.map[i-1][j] != 6:
+                            self.step([[4]]) # go back
+                            isbreak = True
+                        else:
+                            isdone[self.turn_tank] = True
+                            isbreak = True
+                            self.step([[7]]) # turn end
+
 
 if __name__ == '__main__':
     ip = get('https://api.ipify.org').text
@@ -374,21 +473,8 @@ if __name__ == '__main__':
 
 
 '''
-# 이 식 잘못되었을 확률 매우높음
-x = (x-25200)//1000
-y = (y-147450)//1000
-
-exepted -1 19
-
-x원래 = 24200
-y원래 = 166450
-
-[24200, 166450]
-
----
 
 east와 west 반대로 된 듯
-move 명령 내렸는데 위치가 이전과 동일하다? 음의 reward
 
 ---
 
