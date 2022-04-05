@@ -259,7 +259,11 @@ class Environment():
             if self.turn_tank == 4:
                 self.turn_tank = 1
                 print('wait enemy')
-                self._wait_enemy()
+                ret = self._wait_enemy()
+                if ret == 'gameEnd':
+                    done = True
+                    state = self._get_state()
+                    return state, reward, done, None
             else:
                 self.turn_tank += 1
         
@@ -328,7 +332,10 @@ class Environment():
     def _wait_enemy(self):
         self.tankAPI.game_endturn()
         while True:
-            isTurnOwner = self.tankAPI.game_status()['responses']['data']['message']['game_info']['IsTurnOwner']
+            status = self.tankAPI.game_status()
+            if status == 'gameEnd':
+                return 'gameEnd'
+            isTurnOwner = status['responses']['data']['message']['game_info']['IsTurnOwner']
             if not isTurnOwner:
                 time.sleep(5)
             else:
@@ -414,10 +421,19 @@ class Environment():
                 return
         
         # case 3. move-attack-attack
-        # TODO: 구현하기
-        print('case3')
+        print('case3-south(3)')
         
-        pass
+        
+        print('case3-north(4)')
+        
+        
+        print('case3-west(5)')
+        
+        
+        print('case3-east(6)')
+        
+        
+        
     
     
     # 뒤로가라

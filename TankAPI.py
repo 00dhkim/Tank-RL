@@ -82,6 +82,14 @@ class TankAPI():
             if statusResponse.status_code == 200:
                 status = json.loads(statusResponse.content)
                 print('!', end='', flush=True)
+                
+                try:
+                    if status['responses']['error']['code'] == 400:
+                        # 게임종료
+                        self.session_end()
+                        return 'gameEnd'
+                except KeyError:
+                    pass
                 return status
     
     def _dirTxt(self, dirInt):
