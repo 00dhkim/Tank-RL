@@ -288,7 +288,7 @@ class Environment():
         # 적 턴 종료 한 후
         if action == 7 and self.turn_tank == 1:
             print(f'our: {self._get_our_tank_num()}, enemy:{self.enemy_num}')
-            print('turn', status['responses']['data']['message']['game_info']['Turncount'], '\n')
+            print('turn', status['responses']['data']['message']['game_info']['TurnCount'], '\n')
         
         ## 종료 여부 판단하기
         info = None

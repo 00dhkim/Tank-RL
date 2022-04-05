@@ -20,7 +20,7 @@ class TankAPI():
         if resource.json()['message'] != 'Opened':
             raise Exception('receiver is closed')
     
-    def session_create(self, isWindowMode=False, res_x=1920, res_y=1080):
+    def session_create(self, isWindowMode=True, res_x=1920, res_y=1080):
         params = {
             'ip': self.ip,
             'isWindowMode': isWindowMode,
