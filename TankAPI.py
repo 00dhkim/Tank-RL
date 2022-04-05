@@ -7,7 +7,6 @@ import json
 class TankAPI():
     
     def __init__(self):
-        self.gameMap = GameMap()
         self.key = None
         self.ip = None
         self.playername = None
@@ -71,8 +70,10 @@ class TankAPI():
                 join = requests.post("http://20.196.214.79:5050/game/start", data=startParams, timeout=60)
     
     def game_status(self):
+        print('s', end='', flush=True)
         statusParam = {"key": self.key, "playername": self.playername}
         while True:
+            print('.', end='', flush=True)
             try:
                 statusResponse = requests.get("http://20.196.214.79:5050/game/status", statusParam, timeout=60)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
@@ -80,6 +81,7 @@ class TankAPI():
                 continue
             if statusResponse.status_code == 200:
                 status = json.loads(statusResponse.content)
+                print('!', end='', flush=True)
                 return status
     
     def _dirTxt(self, dirInt):
@@ -134,8 +136,10 @@ class TankAPI():
         objects = [] # 탱크 및 장애물들
         agents = status['responses']['data']['message']['agent_info']['agent']
         for agent in agents:
+            print('v', end='', flush=True)
             uid = agent['uid']
             while True:
+                print('.', end='', flush=True)
                 try:
                     view = requests.get(f"http://20.196.214.79:5050/game/view", params={"key": self.key, "uid": uid}, timeout=60)
                 except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
@@ -152,13 +156,13 @@ class TankAPI():
                     continue
             for object in info:
                 if object not in objects and object["IsExistObject"] == True:
-                    self.gameMap.set_map(object['location'][0], object['location'][1], object['ObjectType'])
                     objects.append(object)
+            print('!', end='', flush=True)
         
-        # 아군 탱크 표시
-        for agent in agents:
-            self.gameMap.set_map(agent['location'][0], agent['location'][1], 9)
-        return objects, self.gameMap
+        # # 아군 탱크 표시
+        # for agent in agents:
+        #     self.gameMap.set_map(agent['location'][0], agent['location'][1], 9)
+        return objects
     
     def game_endturn(self):
         endturnParam = {'key': self.key, 'playername': self.playername}
@@ -192,39 +196,3 @@ class TankAPI():
                 continue
             if sessionEnd.status_code == 200:
                 break
-
-
-# 좌표를 칸으로 바꿔서 출력해주기 위한 클래스
-class GameMap:
-    def __init__(self):
-        self.game_map = []
-        for _ in range(32):
-            self.game_map.append([0]*32)
-    
-    def __str__(self):
-        ret = '-'*60 + '\n'
-        for row in self.game_map:
-            ret += ' '.join(map(str, row))
-            ret += '\n'
-        ret = ret.replace('0', ' ')
-        ret = ret.replace('1', 'T') # tank
-        ret = ret.replace('2', '2')
-        ret = ret.replace('3', 'O') # object
-        ret = ret.replace('4', '4')
-        ret = ret.replace('9', 'M') # my tank
-        ret += '-'*60 + '\n'
-        return ret
-    
-    def __repr__(self):
-        return self.__str__()
-    
-    def set_map(self, x, y, objectType):
-        x = (x-25200)//1000
-        y = (y-147450)//1000
-        
-        try:
-            assert 0 <= x <= 31 and 0 <= y <= 31
-            self.game_map[y][x] = objectType
-        except:
-            # print('location excepted', x, y)
-            pass

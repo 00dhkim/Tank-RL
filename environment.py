@@ -86,7 +86,7 @@ class Environment():
         return state
     
     
-    def _set_map(self, enemy_tank_update = False):
+    def _set_map(self):
         # 내 턴에서 이동할 때에는 상대 탱크 업데이트 하지 않음
         # 내 턴에서 공격할 때에는 상대 탱크 업데이트 수행함
         status = self.tankAPI.game_status()
@@ -101,16 +101,17 @@ class Environment():
                     self.map[i][j] == 3 or \
                     self.map[i][j] == 4:
                     self.map[i][j] = 7
-                if enemy_tank_update and self.map[i][j] == 5:
+                if self.map[i][j] == 5:
                     self.map[i][j] = 0 # 상대 탱크 있었던 위치를 '모름'으로 바꿈
         
-        _, gameMap = self.tankAPI.game_view()
-        for i in range(32):
-            for j in range(32):
-                if enemy_tank_update and gameMap.game_map[i][j] == 1: # 상대 탱크
-                    self.map[i][j] = 5
-                elif gameMap.game_map[i][j] == 3: # 장애물
-                    self.map[i][j] = 6
+        objects = self.tankAPI.game_view()
+        for object in objects:
+            i, j = self._location2idx(object['location'])
+            objectType = object['ObjectType']
+            if objectType == 1: # 탱크
+                self.map[i][j] = 5 # 적탱크 (라고 일단 써놓음, 아군이면 뒤에서 덮어쓰기)
+            elif objectType == 3:
+                self.map[i][j] = 6 # 장애물
         
         for agentIdx in range(len(agents)):
             agent = agents[agentIdx]
@@ -142,8 +143,8 @@ class Environment():
     
     def _location2idx(self, location):
         x, y = location[0], location[1]
-        j = (x-24200)//1000 + 1
-        i = (y-147450)//1000 + 1 # +1은 그냥 만약을 위함, 차피 어레이도 넉넉히 잡았음
+        j = (x-24200)//1000
+        i = (y-147450)//1000 # +1은 그냥 만약을 위함, 차피 어레이도 넉넉히 잡았음
         
         assert 0 <= j <= 31 and 0 <= i <= 31
         return i, j # usage: map[i][j]
@@ -194,10 +195,11 @@ class Environment():
     # 액션을 받아 한 단계 실행하는 함수
     def step(self, action):
         action = action[0][0]
-        assert action in self.legal_actions()
+        if not action in self.legal_actions():
+            print('illegal action')
+            return
         reward = 0
         hit = False
-        enemy_tank_update = False
         
         status = self.tankAPI.game_status()
         agents = status['responses']['data']['message']['agent_info']['agent']
@@ -207,7 +209,7 @@ class Environment():
             print(uid, '-> attack')
             # 포신 방향에서 가장 첫번째에 적이 있었으면 (==포탄이 장애물에 막히지 않으면)
             dir = self._angle2direction(self.tank_info[self.turn_tank-1][2])
-            ii, jj = self._location2idx(agent['location'][0]), self._location2idx(agent['location'][1])
+            ii, jj = self._location2idx(agent['location'])
             while True:
                 ii += dir[0]
                 jj += dir[1]
@@ -220,7 +222,6 @@ class Environment():
                 elif self.map[ii][jj] == 5: # 적이면 타격성공
                     reward += 50
                     hit = True
-                    enemy_tank_update = True
                     print('hit!')
                 else:
                     break
@@ -247,17 +248,16 @@ class Environment():
         
         elif action == 5: # move west ←
             print(uid, '-> move west')
-            self.tankAPI.agent_move(uid, 3)
+            self.tankAPI.agent_move(uid, 1)
         
         elif action == 6: # move east →
             print(uid, '-> move east')
-            self.tankAPI.agent_move(uid, 1)
+            self.tankAPI.agent_move(uid, 3)
 
         elif action == 7: # turn end
             print(uid, '-> turn end\n')
             if self.turn_tank == 4:
                 self.turn_tank = 1
-                enemy_tank_update = True
                 print('wait enemy')
                 self._wait_enemy()
             else:
@@ -276,7 +276,7 @@ class Environment():
             self.tank_info[agentIdx] = [agent['hp'], agent['ap'], self.tank_info[agentIdx][2]]
         
         # 적을 타격했거나 내 턴이 완전히 끝난 경우는 업데이트
-        self._set_map(enemy_tank_update=enemy_tank_update)
+        self._set_map()
         
         
         ## reward 판단하기
@@ -362,7 +362,7 @@ class Environment():
         status = self.tankAPI.game_status()
         agents = status['responses']['data']['message']['agent_info']['agent']
         agent = agents[self.turn_tank-1]
-        i, j = self._location2idx(agent['location'][0]), self._location2idx(agent['location'][1])
+        i, j = self._location2idx(agent['location'])
         dir = self._angle2direction(self.tank_info[self.turn_tank-1][2])
 
         # case 1. attack-attack
@@ -381,7 +381,7 @@ class Environment():
                 return
         
         # case 2. rotate-attack-attack
-        print('case2-')
+        print('case2+')
         ii, jj = i, j
         dir = self._angle2direction(self.tank_info[self.turn_tank-1][2] + 45)
         while True:
@@ -397,7 +397,7 @@ class Environment():
                 self.step([[0]]) # attack
                 return
         
-        print('case2+')
+        print('case2-')
         ii, jj = i, j
         dir = self._angle2direction(self.tank_info[self.turn_tank-1][2] - 45)
         while True:
