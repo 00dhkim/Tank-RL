@@ -8,7 +8,7 @@ import TankAPI
 
 IP = '125.137.27.125'
 PLAYERNAME = 'dohyun'
-TURN = 100
+TURN = 30
 DILATION = 100
 
 # 강화학습 하기에 편리하도록 인터페이스를 제공하는 클래스
@@ -69,6 +69,11 @@ class Environment():
     
     # 세션 초기화 및 정보 가져오기
     def reset(self):
+        
+        self.map = np.zeros((32, 32), dtype=np.int32)
+        self.tank_info = np.zeros((4, 3), dtype=np.int32)
+        self.turn_tank = 1 # 우리 탱크(1 ~ 4) 중 누구의 턴인지
+        self.enemy_num = 4
         
         self.tankAPI.session_reset()
         self.tankAPI.session_join()
@@ -202,7 +207,7 @@ class Environment():
         action = action[0][0]
         if not action in self.legal_actions():
             print('illegal action')
-            return
+            action = 7
         reward = 0
         hit = False
         
@@ -231,7 +236,7 @@ class Environment():
                 else:
                     break
                 
-                self.tankAPI.agent_attack(uid)
+            self.tankAPI.agent_attack(uid)
         
         elif action == 1: # rotate +45 (오른쪽 ↻)
             print(uid, '-> rotate +45')
@@ -268,7 +273,7 @@ class Environment():
                 if ret == 'gameEnd':
                     done = True
                     state = self._get_state()
-                    return state, reward, done, None
+                    return state, reward, done, {}
             else:
                 self.turn_tank += 1
         
@@ -300,7 +305,7 @@ class Environment():
             print('turn', status['responses']['data']['message']['game_info']['TurnCount'], '\n')
         
         ## 종료 여부 판단하기
-        info = None
+        info = {}
         done = False
         if self.enemy_num == 0:
             done = True
@@ -377,7 +382,7 @@ class Environment():
         dir = self._angle2direction(self.tank_info[self.turn_tank-1][2])
 
         # case 1. attack-attack
-        print('case1')
+        # print('case1')
         ii, jj = i, j
         while True:
             ii += dir[0]
@@ -387,12 +392,12 @@ class Environment():
             elif self.map[ii][jj] == 6: # 장애물이면
                 break # case 1 중단 (case 1에 해당하지 않음)
             elif self.map[ii][jj] == 5: # 바라보는 방향에 적이 있으면
-                self.step([[0]]) # attack
-                self.step([[0]]) # attack
-                return
+                # self.step([[0]]) # attack
+                # self.step([[0]]) # attack
+                return [0, 0]
         
         # case 2. rotate-attack-attack
-        print('case2+')
+        # print('case2+')
         ii, jj = i, j
         dir = self._angle2direction(self.tank_info[self.turn_tank-1][2] + 45)
         while True:
@@ -403,12 +408,12 @@ class Environment():
             elif self.map[ii][jj] == 6: # 장애물이면
                 break # case 2 중단 (case 2에 해당하지 않음)
             elif self.map[ii][jj] == 5: # 바라보는 방향에 적이 있으면
-                self.step([[1]]) # rotate
-                self.step([[0]]) # attack
-                self.step([[0]]) # attack
-                return
+                # self.step([[1]]) # rotate
+                # self.step([[0]]) # attack
+                # self.step([[0]]) # attack
+                return [1, 0, 0]
         
-        print('case2-')
+        # print('case2-')
         ii, jj = i, j
         dir = self._angle2direction(self.tank_info[self.turn_tank-1][2] - 45)
         while True:
@@ -419,13 +424,13 @@ class Environment():
             elif self.map[ii][jj] == 6: # 장애물이면
                 break # case 2 중단 (case 2에 해당하지 않음)
             elif self.map[ii][jj] == 5: # 바라보는 방향에 적이 있으면
-                self.step([[2]]) # rotate
-                self.step([[0]]) # attack
-                self.step([[0]]) # attack
-                return
+                # self.step([[2]]) # rotate
+                # self.step([[0]]) # attack
+                # self.step([[0]]) # attack
+                return [2, 0, 0]
         
         # case 3. move-attack-attack
-        print('case3-south(3)')
+        # print('case3-south(3)')
         if 0 <= i-1 <= 30: # 아래쪽으로 이동 가능하면
             if self.map[i-1][j] == 7: # 아랫쪽이 빈 공간이면
                 ii, jj = i-1, j
@@ -438,12 +443,12 @@ class Environment():
                     elif self.map[ii][jj] == 6: # 장애물이면
                         break # case 3 중단 (case 3에 해당하지 않음)
                     elif self.map[ii][jj] == 5: # 바라보는 방향에 적이 있으면
-                        self.step([[3]]) # move south
-                        self.step([[0]]) # attack
-                        self.step([[0]]) # attack
-                        return
+                        # self.step([[3]]) # move south
+                        # self.step([[0]]) # attack
+                        # self.step([[0]]) # attack
+                        return [3, 0, 0]
         
-        print('case3-north(4)')
+        # print('case3-north(4)')
         if 0 <= i+1 <= 30: # 위쪽으로 이동 가능하면
             if self.map[i+1][j] == 7: # 위쪽이 빈 공간이면
                 ii, jj = i+1, j
@@ -456,12 +461,12 @@ class Environment():
                     elif self.map[ii][jj] == 6: # 장애물이면
                         break # case 3 중단 (case 3에 해당하지 않음)
                     elif self.map[ii][jj] == 5: # 바라보는 방향에 적이 있으면
-                        self.step([[4]]) # move north
-                        self.step([[0]]) # attack
-                        self.step([[0]]) # attack
-                        return
+                        # self.step([[4]]) # move north
+                        # self.step([[0]]) # attack
+                        # self.step([[0]]) # attack
+                        return [4, 0, 0]
         
-        print('case3-west(5)')
+        # print('case3-west(5)')
         if 0 <= j-1 <= 30: # 왼쪽으로 이동 가능하면
             if self.map[j-1][j] == 7: # 왼쪽이 빈 공간이면
                 ii, jj = i, j-1
@@ -474,12 +479,12 @@ class Environment():
                     elif self.map[ii][jj] == 6: # 장애물이면
                         break # case 3 중단 (case 3에 해당하지 않음)
                     elif self.map[ii][jj] == 5: # 바라보는 방향에 적이 있으면
-                        self.step([[5]]) # move west
-                        self.step([[0]]) # attack
-                        self.step([[0]]) # attack
-                        return
+                        # self.step([[5]]) # move west
+                        # self.step([[0]]) # attack
+                        # self.step([[0]]) # attack
+                        return [5, 0, 0]
         
-        print('case3-east(6)')
+        # print('case3-east(6)')
         if 0 <= j+1 <= 30: # 오른쪽으로 이동 가능하면
             if self.map[j+1][j] == 7: # 오른쪽이 빈 공간이면
                 ii, jj = i, j+1
@@ -492,13 +497,14 @@ class Environment():
                     elif self.map[ii][jj] == 6: # 장애물이면
                         break # case 3 중단 (case 3에 해당하지 않음)
                     elif self.map[ii][jj] == 5: # 바라보는 방향에 적이 있으면
-                        self.step([[6]]) # move east
-                        self.step([[0]]) # attack
-                        self.step([[0]]) # attack
-                        return
+                        # self.step([[6]]) # move east
+                        # self.step([[0]]) # attack
+                        # self.step([[0]]) # attack
+                        return [6, 0, 0]
         
-        print('end turn')
-        self.step([[7]]) # end turn
+        # print('end turn')
+        # self.step([[7]]) # end turn
+        return False
     
     
     # 뒤로가라
