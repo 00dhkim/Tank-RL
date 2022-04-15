@@ -56,6 +56,7 @@ class Environment():
         self.tank_info = np.zeros((4, 3), dtype=np.int32)
         self.turn_tank = 1 # 우리 탱크(1 ~ 4) 중 누구의 턴인지
         self.enemy_num = 4
+        self.hit_pos = []
         
         self.tankAPI = TankAPI.TankAPI()
     
@@ -74,6 +75,7 @@ class Environment():
         self.tank_info = np.zeros((4, 3), dtype=np.int32)
         self.turn_tank = 1 # 우리 탱크(1 ~ 4) 중 누구의 턴인지
         self.enemy_num = 4
+        self.hit_pos = []
         
         self.tankAPI.session_reset()
         self.tankAPI.session_join()
@@ -146,6 +148,13 @@ class Environment():
                     break
                 if self.map[ii][jj] == 0:
                     self.map[ii][jj] = 7
+        
+        # 그 장소에서 2번 이상 hit -> 그냥 빈 공간으로 간주.
+        for i in range(32):
+            for j in range(32):
+                if self.map[i][j] == 5:
+                    if self.hit_pos.count((i, j)) >= 2:
+                        self.map[i][j] = 7
     
     
     def _location2idx(self, location):
@@ -204,12 +213,14 @@ class Environment():
     
     # 액션을 받아 한 단계 실행하는 함수
     def step(self, action):
+        info = {}
         action = action[0][0]
         if not action in self.legal_actions():
             print('illegal action')
             action = 7
         reward = 0
         hit = False
+        info['action'] = action
         
         status = self.tankAPI.game_status()
         agents = status['responses']['data']['message']['agent_info']['agent']
@@ -232,7 +243,10 @@ class Environment():
                 elif self.map[ii][jj] == 5: # 적이면 타격성공
                     reward += 50
                     hit = True
+                    self.hit_pos.append((ii, jj))
                     print('hit!')
+                elif self.map[ii][jj] == 0: # 모르는 공간이면 계속 나아감
+                    continue
                 else:
                     break
                 
@@ -273,7 +287,7 @@ class Environment():
                 if ret == 'gameEnd':
                     done = True
                     state = self._get_state()
-                    return state, reward, done, {}
+                    return state, reward, done, info
             else:
                 self.turn_tank += 1
         
@@ -305,17 +319,16 @@ class Environment():
             print('turn', status['responses']['data']['message']['game_info']['TurnCount'], '\n')
         
         ## 종료 여부 판단하기
-        info = {}
         done = False
         if self.enemy_num == 0:
             done = True
-            info = 'win'
+            info['done'] = 'win'
         elif np.count_nonzero(self.map == 1) +\
                 np.count_nonzero(self.map == 2) +\
                 np.count_nonzero(self.map == 3) +\
                 np.count_nonzero(self.map == 4) == 0:
             done = True
-            info = 'lose'
+            info['done'] = 'lose'
         
         state = self._get_state()
         

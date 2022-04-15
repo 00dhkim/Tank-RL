@@ -70,10 +70,8 @@ class TankAPI():
                 join = requests.post("http://20.196.214.79:5050/game/start", data=startParams, timeout=60)
     
     def game_status(self):
-        print('s', end='', flush=True)
         statusParam = {"key": self.key, "playername": self.playername}
         while True:
-            print('.', end='', flush=True)
             try:
                 statusResponse = requests.get("http://20.196.214.79:5050/game/status", statusParam, timeout=60)
             except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
@@ -81,7 +79,6 @@ class TankAPI():
                 continue
             if statusResponse.status_code == 200:
                 status = json.loads(statusResponse.content)
-                print('!', end='', flush=True)
                 
                 try:
                     if status['responses']['error']['code'] == 400:
@@ -144,10 +141,8 @@ class TankAPI():
         objects = [] # 탱크 및 장애물들
         agents = status['responses']['data']['message']['agent_info']['agent']
         for agent in agents:
-            print('v', end='', flush=True)
             uid = agent['uid']
             while True:
-                print('.', end='', flush=True)
                 try:
                     view = requests.get(f"http://20.196.214.79:5050/game/view", params={"key": self.key, "uid": uid}, timeout=60)
                 except ConnectionRefusedError or ConnectionResetError or ChunkedEncodingError or ConnectionError:
@@ -165,7 +160,6 @@ class TankAPI():
             for object in info:
                 if object not in objects and object["IsExistObject"] == True:
                     objects.append(object)
-            print('!', end='', flush=True)
         
         # # 아군 탱크 표시
         # for agent in agents:
