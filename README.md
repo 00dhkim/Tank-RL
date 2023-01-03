@@ -23,7 +23,5 @@
 
 ## URL
 
-- http://www.kidet.or.kr/index.php?page=view&pg=1&idx=981&hCode=BOARD&bo_idx=1&sfl=&stx=
-- http://www.kidet.or.kr/index.php?page=view&pg=1&idx=993&hCode=BOARD&bo_idx=1&sfl=&stx=
-- http://www.kidet.or.kr/index.php?hCode=BOARD&page=view&bo_idx=1&idx=1090
-- http://www.kidet.or.kr/index.php?page=view&pg=1&idx=1097&hCode=BOARD&bo_idx=5&sfl=&stx=
+- [대회 개요](http://www.kidet.or.kr/index.php?page=view&pg=1&idx=993&hCode=BOARD&bo_idx=1&sfl=&stx=)
+- [수상 사진](http://www.kidet.or.kr/index.php?page=view&pg=1&idx=1097&hCode=BOARD&bo_idx=5&sfl=&stx=)
